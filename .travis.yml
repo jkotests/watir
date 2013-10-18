@@ -1,11 +1,8 @@
 rvm:
-  - 1.9.3
   - 2.0.0
 notifications:
   recipients:
     - jari.bakken@gmail.com
-    - p0deje@gmail.com
-    - jarmo.p@gmail.com
   irc: "irc.freenode.net#watir"
 before_script:
   - support/travis.sh
