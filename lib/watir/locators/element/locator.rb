@@ -70,8 +70,6 @@ module Watir
 
         def using_watir(filter = :first)
           selector = selector_builder.normalized_selector
-          visible = selector.delete(:visible)
-          visible_text = selector.delete(:visible_text)
           tag_name = selector[:tag_name].is_a?(::Symbol) ? selector[:tag_name].to_s : selector[:tag_name]
           validation_required = (selector.key?(:css) || selector.key?(:xpath)) && tag_name
 
@@ -80,11 +78,14 @@ module Watir
           end
           idx = selector.delete(:index) unless selector[:adjacent]
 
-          query_scope = ensure_scope_context
-          rx_selector = delete_regexps_from(selector)
+          filter_selector = delete_filters_from(selector)
+# TODO: make sure we are not doing unnecessary tag_name filtering
+          filter_selector[:tag_name] = tag_name if tag_name
 
-          if rx_selector.key?(:label) && selector_builder.should_use_label_element?
-            label = label_from_text(rx_selector.delete(:label)) || return
+          query_scope = ensure_scope_context
+
+          if filter_selector.key?(:label) && selector_builder.should_use_label_element?
+            label = label_from_text(filter_selector.delete(:label)) || return
             if (id = label.attribute('for'))
               selector[:id] = id
             else
@@ -93,32 +94,28 @@ module Watir
           end
 
           how, what = selector_builder.build(selector)
-
           unless how
             raise Error, "internal error: unable to build Selenium selector from #{selector.inspect}"
           end
 
           if how == :xpath && can_convert_regexp_to_contains?
-            rx_selector.each do |key, value|
+            filter_selector.each do |key, value|
               next if key == :tag_name || key == :text
 
               predicates = regexp_selector_to_predicates(key, value)
               what = "(#{what})[#{predicates.join(' and ')}]" unless predicates.empty?
-              rx_selector.delete(key)
+              filter_selector.delete(key)
             end
           end
 
-# TODO: make sure we are not doing unnecessary tag_name filtering
-          rx_selector[:tag_name] = tag_name if tag_name
-          rx_selector[:visible] = visible if visible
-          rx_selector[:visible_text] = visible_text if visible_text
 
-          needs_filtering = idx && idx != 0 || !visible.nil? || !visible_text.nil? || validation_required || filter == :all || !rx_selector.empty?
+
+          needs_filtering = idx && idx != 0 || validation_required || filter == :all || !filter_selector.empty?
 
           return locate_element(how, what, query_scope) unless needs_filtering
 
           elements = locate_elements(how, what, query_scope) || []
-          filter_elements(elements, rx_selector, idx: idx, filter: filter)
+          filter_elements(elements, filter_selector, idx: idx, filter: filter)
         end
 
         def validate(elements, tag_name)
@@ -148,25 +145,25 @@ module Watir
         end
 
         def filter_elements(elements, selector, idx: nil, filter: :first)
-          selector.delete(:visible) if selector[:visible].nil?
-          selector.delete(:visible_text) if selector[:visible_text].nil?
-          selector.delete(:tag_name) if selector[:tag_name].nil?
-
 # TODO: when filter: :first, stop filtering when idx found
           matches = elements.select { |el| matches_selector?(el, selector) }
           filter == :first ? matches[idx || 0] : matches
         end
 
-        def delete_regexps_from(selector)
-          rx_selector = {}
+        def delete_filters_from(selector)
+          filter_selector = {}
+
+          [:visible, :visible_text].each do |how|
+            next unless selector.key?(how)
+            filter_selector[how] = selector.delete(how)
+          end
 
           selector.dup.each do |how, what|
             next unless what.is_a?(Regexp)
-            rx_selector[how] = what
-            selector.delete how
+            filter_selector[how] = selector.delete(how)
           end
 
-          rx_selector
+          filter_selector
         end
 
         def label_from_text(label_exp)
