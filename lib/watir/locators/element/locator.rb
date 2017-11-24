@@ -59,7 +59,7 @@ module Watir
             if filter == :all
               found = locate_elements(sel, value)
               return found if sel == :tag_name
-              return filter_elements_by_locator(found, tag_name: tag_name, filter: filter).compact
+              return filter_elements(found, {tag_name: tag_name}, filter: filter).compact
             else
               found = locate_element(sel, value)
               return sel != :tag_name && tag_name && !validate([found], tag_name) ? nil : found
@@ -86,7 +86,8 @@ module Watir
 
           if needs_filtering
             matching = matching_elements(how, what, selector)
-            return filter_elements_by_locator(matching, visible, visible_text, idx, tag_name: tag_name, filter: filter)
+            filter_selector = {tag_name: tag_name, visible: visible, visible_text: visible_text}
+            return filter_elements(matching, filter_selector, idx: idx, filter: filter)
           elsif how
             locate_element(how, what)
           else
@@ -112,6 +113,8 @@ module Watir
               Watir.logger.deprecate(':text locator with RegExp values to find elements based on only visible text', ":visible_text")
             end
             vis
+          when :visible
+            element.displayed?
           when :visible_text
             element.text
           when :tag_name
@@ -152,19 +155,17 @@ module Watir
           end
 
           elements = locate_elements(how, what, query_scope)
-          filter_elements_by_regex(elements, rx_selector, filter)
+          filter_elements(elements, rx_selector, filter: filter)
         end
 
-        def filter_elements_by_locator(elements, visible = nil, visible_text = nil, idx = nil, tag_name: nil, filter: :first)
-          elements.select! { |el| visible == el.displayed? } unless visible.nil?
-          elements.select! { |el| visible_text === el.text } unless visible_text.nil?
-          elements.select! { |el| element_validator.validate(el, {tag_name: tag_name}) } unless tag_name.nil?
-          filter == :first ? elements[idx || 0] : elements
-        end
+        def filter_elements(elements, selector, idx: nil, filter: :first)
+          selector.delete(:visible) if selector[:visible].nil?
+          selector.delete(:visible_text) if selector[:visible_text].nil?
+          selector.delete(:tag_name) if selector[:tag_name].nil?
 
-        def filter_elements_by_regex(elements, selector, filter)
-          method = filter == :first ? :find : :select
-          elements.__send__(method) { |el| matches_selector?(el, selector) }
+# TODO: when filter: :first, stop filtering when idx found
+          matches = elements.select { |el| matches_selector?(el, selector) }
+          filter == :first ? matches[idx || 0] : matches
         end
 
         def delete_regexps_from(selector)
@@ -188,7 +189,11 @@ module Watir
 
         def matches_selector?(element, selector)
           selector.all? do |how, what|
-            what === fetch_value(element, how)
+            if how == :tag_name && what.is_a?(String)
+              element_validator.validate(element, {tag_name: what})
+            else
+              what === fetch_value(element, how)
+            end
           end
         end
 
