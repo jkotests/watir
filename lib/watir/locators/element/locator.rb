@@ -123,10 +123,6 @@ module Watir
           end
         end
 
-        def all_elements
-          locate_elements(:xpath, ".//*")
-        end
-
         def wd_find_by_regexp_selector(selector, filter)
           query_scope = ensure_scope_context
           rx_selector = delete_regexps_from(selector)
