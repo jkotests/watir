@@ -146,8 +146,14 @@ module Watir
 
         def filter_elements(elements, selector, idx: nil, filter: :first)
 # TODO: when filter: :first, stop filtering when idx found
-          matches = elements.select { |el| matches_selector?(el, selector) }
-          filter == :first ? matches[idx || 0] : matches
+          matches =
+          if filter == :first
+            idx ||= 0
+            es = elements.lazy.select { |el| matches_selector?(el, selector) }
+            es.take(idx + 1).to_a[idx]
+          else
+            elements.select { |el| matches_selector?(el, selector) }
+          end
         end
 
         def delete_filters_from(selector)
