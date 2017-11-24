@@ -80,53 +80,6 @@ module Watir
           end
           idx = selector.delete(:index) unless selector[:adjacent]
 
-          how, what = selector_builder.build(selector)
-
-          needs_filtering = idx && idx != 0 || !visible.nil? || !visible_text.nil? || validation_required || filter == :all
-
-          if needs_filtering
-            matching = matching_elements(how, what, selector)
-            filter_selector = {tag_name: tag_name, visible: visible, visible_text: visible_text}
-            return filter_elements(matching, filter_selector, idx: idx, filter: filter)
-          elsif how
-            locate_element(how, what)
-          else
-            wd_find_by_regexp_selector(selector, :first)
-          end
-        end
-
-        def validate(elements, tag_name)
-          elements.compact.all? { |element| element_validator.validate(element, {tag_name: tag_name}) }
-        end
-
-        def matching_elements(how, what, selector = nil)
-          found = how ? locate_elements(how, what) : wd_find_by_regexp_selector(selector, :all)
-          found || []
-        end
-
-        def fetch_value(element, how)
-          case how
-          when :text
-            vis = element.text
-            all = Watir::Element.new(@query_scope, element: element).send(:execute_js, :getTextContent, element).strip
-            unless all == vis.strip
-              Watir.logger.deprecate(':text locator with RegExp values to find elements based on only visible text', ":visible_text")
-            end
-            vis
-          when :visible
-            element.displayed?
-          when :visible_text
-            element.text
-          when :tag_name
-            element.tag_name.downcase
-          when :href
-            (href = element.attribute(:href)) && href.strip
-          else
-            element.attribute(how.to_s.tr("_", "-").to_sym)
-          end
-        end
-
-        def wd_find_by_regexp_selector(selector, filter)
           query_scope = ensure_scope_context
           rx_selector = delete_regexps_from(selector)
 
@@ -151,11 +104,47 @@ module Watir
 
               predicates = regexp_selector_to_predicates(key, value)
               what = "(#{what})[#{predicates.join(' and ')}]" unless predicates.empty?
+              rx_selector.delete(key)
             end
           end
 
-          elements = locate_elements(how, what, query_scope)
-          filter_elements(elements, rx_selector, filter: filter)
+# TODO: make sure we are not doing unnecessary tag_name filtering
+          rx_selector[:tag_name] = tag_name if tag_name
+          rx_selector[:visible] = visible if visible
+          rx_selector[:visible_text] = visible_text if visible_text
+
+          needs_filtering = idx && idx != 0 || !visible.nil? || !visible_text.nil? || validation_required || filter == :all || !rx_selector.empty?
+
+          return locate_element(how, what, query_scope) unless needs_filtering
+
+          elements = locate_elements(how, what, query_scope) || []
+          filter_elements(elements, rx_selector, idx: idx, filter: filter)
+        end
+
+        def validate(elements, tag_name)
+          elements.compact.all? { |element| element_validator.validate(element, {tag_name: tag_name}) }
+        end
+
+        def fetch_value(element, how)
+          case how
+          when :text
+            vis = element.text
+            all = Watir::Element.new(@query_scope, element: element).send(:execute_js, :getTextContent, element).strip
+            unless all == vis.strip
+              Watir.logger.deprecate(':text locator with RegExp values to find elements based on only visible text', ":visible_text")
+            end
+            vis
+          when :visible
+            element.displayed?
+          when :visible_text
+            element.text
+          when :tag_name
+            element.tag_name.downcase
+          when :href
+            (href = element.attribute(:href)) && href.strip
+          else
+            element.attribute(how.to_s.tr("_", "-").to_sym)
+          end
         end
 
         def filter_elements(elements, selector, idx: nil, filter: :first)
