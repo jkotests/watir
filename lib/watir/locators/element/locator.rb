@@ -59,7 +59,8 @@ module Watir
             if filter == :all
               found = locate_elements(sel, value)
               return found if sel == :tag_name
-              return filter_elements(found, {tag_name: tag_name}, filter: filter).compact
+              filter_selector = tag_name ? {tag_name: tag_name} : {}
+              return filter_elements(found, filter_selector, filter: filter).compact
             else
               found = locate_element(sel, value)
               return sel != :tag_name && tag_name && !validate([found], tag_name) ? nil : found
@@ -76,7 +77,6 @@ module Watir
           if selector.key?(:index) && filter == :all
             raise ArgumentError, "can't locate all elements by :index"
           end
-          idx = selector.delete(:index) unless selector[:adjacent]
 
           filter_selector = delete_filters_from(selector)
 # TODO: make sure we are not doing unnecessary tag_name filtering
@@ -100,7 +100,7 @@ module Watir
 
           if how == :xpath && can_convert_regexp_to_contains?
             filter_selector.each do |key, value|
-              next if key == :tag_name || key == :text
+              next if [:tag_name, :text, :visible_text, :visible, :index].include?(key)
 
               predicates = regexp_selector_to_predicates(key, value)
               what = "(#{what})[#{predicates.join(' and ')}]" unless predicates.empty?
@@ -108,14 +108,13 @@ module Watir
             end
           end
 
-
-
-          needs_filtering = idx && idx != 0 || validation_required || filter == :all || !filter_selector.empty?
-
-          return locate_element(how, what, query_scope) unless needs_filtering
-
-          elements = locate_elements(how, what, query_scope) || []
-          filter_elements(elements, filter_selector, idx: idx, filter: filter)
+          needs_filtering = validation_required || filter == :all || !filter_selector.empty?
+          if needs_filtering
+            elements = locate_elements(how, what, query_scope) || []
+            filter_elements(elements, filter_selector, filter: filter)
+          else
+            locate_element(how, what, query_scope)
+          end
         end
 
         def validate(elements, tag_name)
@@ -144,11 +143,9 @@ module Watir
           end
         end
 
-        def filter_elements(elements, selector, idx: nil, filter: :first)
-# TODO: when filter: :first, stop filtering when idx found
-          matches =
+        def filter_elements(elements, selector, filter: :first)
           if filter == :first
-            idx ||= 0
+            idx = selector.delete(:index) || 0
             es = elements.lazy.select { |el| matches_selector?(el, selector) }
             es.take(idx + 1).to_a[idx]
           else
@@ -167,6 +164,10 @@ module Watir
           selector.dup.each do |how, what|
             next unless what.is_a?(Regexp)
             filter_selector[how] = selector.delete(how)
+          end
+
+          if selector[:index] && !selector[:adjacent]
+            filter_selector[:index] = selector.delete(:index)
           end
 
           filter_selector
