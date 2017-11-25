@@ -23,7 +23,7 @@ describe Watir::Element do
       wd_element = browser.div(id: "foo").wd
 
       # simulate element going stale during lookup
-      allow(browser.driver).to receive(:find_element).with(:id, 'foo') { wd_element }
+      allow(browser.driver).to receive(:find_element).with(:xpath, ".//div[@id='foo']") { wd_element }
       browser.refresh
 
       expect(browser.div(:id, 'foo')).to_not be_present

@@ -204,7 +204,7 @@ describe "Element" do
       # simulate element going stale during lookup
       allow(browser.driver).to receive(:find_element).with(:css, '#new_user_email') { wd_element }
       allow(browser.driver).to receive(:find_elements).with(:css, '#new_user_email') { [wd_element] }
-      allow(browser.driver).to receive(:find_elements).with(:tag_name, 'iframe') { [] }
+      allow(browser.driver).to receive(:find_elements).with(:xpath, './/iframe') { [] }
       browser.refresh
 
       expect { browser.text_field(css: '#new_user_email').visible? }.to raise_unknown_object_exception
