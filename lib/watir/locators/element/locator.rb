@@ -104,15 +104,17 @@ module Watir
               next if [:tag_name, :text, :visible_text, :visible, :index].include?(key)
 
               predicates = regexp_selector_to_predicates(key, value)
-              what = "(#{what})[#{predicates.join(' and ')}]" unless predicates.empty?
-              filter_selector.delete(key)
+              unless predicates.empty?
+                what = "(#{what})[#{predicates.join(' and ')}]"
+                filter_selector.delete(key)
+              end
             end
           end
 
           needs_filtering = filter == :all || !filter_selector.empty?
 # TODO: move to delete_filters_from
           needs_filtering = false if filter_selector == {index: 0}
-          
+
           if needs_filtering
             elements = locate_elements(how, what, query_scope) || []
             filter_elements(elements, filter_selector, filter: filter)
