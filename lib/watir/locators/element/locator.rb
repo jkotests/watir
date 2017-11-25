@@ -80,7 +80,8 @@ module Watir
 
           filter_selector = delete_filters_from(selector)
 # TODO: make sure we are not doing unnecessary tag_name filtering
-          filter_selector[:tag_name] = tag_name if tag_name
+# TODO: move to delete_filters_from?
+          filter_selector[:tag_name] = tag_name if validation_required
 
           query_scope = ensure_scope_context
 
@@ -108,7 +109,10 @@ module Watir
             end
           end
 
-          needs_filtering = validation_required || filter == :all || !filter_selector.empty?
+          needs_filtering = filter == :all || !filter_selector.empty?
+# TODO: move to delete_filters_from
+          needs_filtering = false if filter_selector == {index: 0}
+          
           if needs_filtering
             elements = locate_elements(how, what, query_scope) || []
             filter_elements(elements, filter_selector, filter: filter)
@@ -144,6 +148,7 @@ module Watir
         end
 
         def filter_elements(elements, selector, filter: :first)
+# TODO: Need to support {index: -1} -> there don't appear to be any tests
           if filter == :first
             idx = selector.delete(:index) || 0
             es = elements.lazy.select { |el| matches_selector?(el, selector) }
