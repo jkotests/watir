@@ -150,11 +150,15 @@ module Watir
         end
 
         def filter_elements(elements, selector, filter: :first)
-# TODO: Need to support {index: -1} -> there don't appear to be any tests
           if filter == :first
             idx = selector.delete(:index) || 0
-            es = elements.lazy.select { |el| matches_selector?(el, selector) }
-            es.take(idx + 1).to_a[idx]
+            if idx.negative?
+              elements.reverse!
+              idx = idx.abs - 1
+            end
+
+            matches = elements.lazy.select { |el| matches_selector?(el, selector) }
+            matches.take(idx + 1).to_a[idx]
           else
             elements.select { |el| matches_selector?(el, selector) }
           end
