@@ -260,11 +260,11 @@ module Watir
     # @param args Arguments will be available in the given script in the 'arguments' pseudo-array
     #
 
-    def execute_script(script, *args)
+    def execute_script(script, *args, **keywords)
       args.map! { |e| e.kind_of?(Watir::Element) ? e.wd : e }
       returned = @driver.execute_script(script, *args)
 
-      wrap_elements_in(self, returned)
+      wrap_elements_in(self, returned, **keywords)
     end
 
     #
@@ -326,14 +326,14 @@ module Watir
 
     private
 
-    def wrap_elements_in(scope, obj)
+    def wrap_elements_in(scope, obj, element_wrapper: nil)
       case obj
       when Selenium::WebDriver::Element
-        wrap_element(scope, obj)
+        wrap_element(scope, obj, element_wrapper)
       when Array
-        obj.map { |e| wrap_elements_in(scope, e) }
+        obj.map { |e| wrap_elements_in(scope, e, element_wrapper) }
       when Hash
-        obj.each { |k,v| obj[k] = wrap_elements_in(scope, v) }
+        obj.each { |k,v| obj[k] = wrap_elements_in(scope, v, element_wrapper) }
 
         obj
       else
@@ -341,8 +341,9 @@ module Watir
       end
     end
 
-    def wrap_element(scope, element)
-      Watir.element_class_for(element.tag_name.downcase).new(scope, element: element)
+    def wrap_element(scope, element, element_wrapper = nil)
+      element_wrapper ||= Watir.element_class_for(element.tag_name.downcase)
+      element_wrapper.new(scope, element: element)
     end
 
   end # Browser

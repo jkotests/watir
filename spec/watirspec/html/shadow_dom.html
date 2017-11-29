@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+  <head></head>
+  <body>
+    <p id="hostElement"></p>
+    <script>
+      var shadow = document.querySelector('#hostElement')
+        .attachShadow({mode: 'open'});
+      shadow.innerHTML = '\
+        <span>first shadow</span>\n\
+        <div>has <span>nested</span> element</div>\n\
+        <span id="last">last shadow</span>\n\
+      ';
+    </script>
+  </body>
+</html>

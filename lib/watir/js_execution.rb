@@ -4,8 +4,8 @@ module Watir
     #
     # Delegates script execution to Browser or IFrame.
     #
-    def execute_script(script, *args)
-      @query_scope.execute_script(script, *args)
+    def execute_script(script, *args, **keywords)
+      @query_scope.execute_script(script, *args, **keywords)
     end
 
     #
@@ -137,6 +137,10 @@ module Watir
 
     def select_text(str)
       element_call { execute_js :selectText, @element, str }
+    end
+
+    def shadow_root
+      element_call { execute_js(:shadowRoot, @element, element_wrapper: Watir::ShadowRoot) }
     end
 
   end # JSExecution

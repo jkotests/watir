@@ -60,11 +60,11 @@ module Watir
     # @see Watir::Browser#execute_script
     #
 
-    def execute_script(script, *args)
+    def execute_script(script, *args, **keywords)
       args.map! { |e| e.kind_of?(Watir::Element) ? e.wd : e }
       returned = driver.execute_script(script, *args)
 
-      browser.send(:wrap_elements_in, self, returned)
+      browser.send(:wrap_elements_in, self, returned, **keywords)
     end
 
     def ensure_context

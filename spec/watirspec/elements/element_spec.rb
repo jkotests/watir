@@ -467,7 +467,6 @@ describe "Element" do
 
       expect(width).to eq 104.0
     end
-
   end
 
   describe '#center' do
@@ -480,4 +479,12 @@ describe "Element" do
     end
   end
 
+  compliant_on :chrome do
+    describe '#shadow_root' do
+      it 'returns the shadow root of the element' do
+        browser.goto WatirSpec.url_for('shadow_dom.html')
+        expect(browser.p(id: 'hostElement').shadow_root).to be_a(Watir::ShadowRoot)
+      end
+    end
+  end
 end
