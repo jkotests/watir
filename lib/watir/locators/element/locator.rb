@@ -106,7 +106,6 @@ module Watir
               predicates = regexp_selector_to_predicates(key, value)
               unless predicates.empty?
                 what = "(#{what})[#{predicates.join(' and ')}]"
-                filter_selector.delete(key)
               end
             end
           end
