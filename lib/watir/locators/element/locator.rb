@@ -6,15 +6,15 @@ module Watir
         attr_reader :element_validator
 
         WD_FINDERS = [
-#          :class,
-#          :class_name,
+          :class,
+          :class_name,
           :css,
-#          :id,
+          :id,
           :link,
           :link_text,
-#          :name,
+          :name,
           :partial_link_text,
-#          :tag_name,
+          :tag_name,
           :xpath
         ]
 
