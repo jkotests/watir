@@ -70,13 +70,13 @@ module Watir
         end
 
         def using_watir(filter = :first)
-          if selector.key?(:index) && filter == :all
-            raise ArgumentError, "can't locate all elements by :index"
-          end
-
           selector = selector_builder.normalized_selector
           tag_name = selector[:tag_name].is_a?(::Symbol) ? selector[:tag_name].to_s : selector[:tag_name]
           validation_required = (selector.key?(:css) || selector.key?(:xpath)) && tag_name
+
+          if selector.key?(:index) && filter == :all
+            raise ArgumentError, "can't locate all elements by :index"
+          end
 
           filter_selector = delete_filters_from(selector)
           filter_selector[:tag_name] = tag_name if validation_required
