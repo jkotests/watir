@@ -70,17 +70,15 @@ module Watir
         end
 
         def using_watir(filter = :first)
-          selector = selector_builder.normalized_selector
-          tag_name = selector[:tag_name].is_a?(::Symbol) ? selector[:tag_name].to_s : selector[:tag_name]
-          validation_required = (selector.key?(:css) || selector.key?(:xpath)) && tag_name
-
           if selector.key?(:index) && filter == :all
             raise ArgumentError, "can't locate all elements by :index"
           end
 
+          selector = selector_builder.normalized_selector
+          tag_name = selector[:tag_name].is_a?(::Symbol) ? selector[:tag_name].to_s : selector[:tag_name]
+          validation_required = (selector.key?(:css) || selector.key?(:xpath)) && tag_name
+
           filter_selector = delete_filters_from(selector)
-# TODO: make sure we are not doing unnecessary tag_name filtering
-# TODO: move to delete_filters_from?
           filter_selector[:tag_name] = tag_name if validation_required
 
           query_scope = ensure_scope_context
@@ -111,7 +109,6 @@ module Watir
           end
 
           needs_filtering = filter == :all || !filter_selector.empty?
-# TODO: move to delete_filters_from
           needs_filtering = false if filter_selector == {index: 0}
 
           if needs_filtering
@@ -156,6 +153,7 @@ module Watir
               idx = idx.abs - 1
             end
 
+            # Lazy evaluation to avoid fetching values for elements that will be discarded
             matches = elements.lazy.select { |el| matches_selector?(el, selector) }
             matches.take(idx + 1).to_a[idx]
           else
@@ -166,11 +164,15 @@ module Watir
         def delete_filters_from(selector)
           filter_selector = {}
 
+          # Remove selectors that can never be used in XPath builder
           [:visible, :visible_text].each do |how|
             next unless selector.key?(how)
             filter_selector[how] = selector.delete(how)
           end
 
+          # Regexp locators currently need to be validated even if they are included in the XPath builder
+          # TODO: Identify Regexp that can have an exact equivalent using XPath contains (ie would not require
+          #  filtering) vs approximations (ie would still requiring filtering)
           selector.dup.each do |how, what|
             next unless what.is_a?(Regexp)
             filter_selector[how] = selector.delete(how)
