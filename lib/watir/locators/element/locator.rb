@@ -71,15 +71,12 @@ module Watir
 
         def using_watir(filter = :first)
           selector = selector_builder.normalized_selector
-          tag_name = selector[:tag_name].is_a?(::Symbol) ? selector[:tag_name].to_s : selector[:tag_name]
-          validation_required = (selector.key?(:css) || selector.key?(:xpath)) && tag_name
 
           if selector.key?(:index) && filter == :all
             raise ArgumentError, "can't locate all elements by :index"
           end
 
           filter_selector = delete_filters_from(selector)
-          filter_selector[:tag_name] = tag_name if validation_required
 
           query_scope = ensure_scope_context
 
@@ -161,6 +158,11 @@ module Watir
             filter_selector[how] = selector.delete(how)
           end
 
+          if tag_validation_required?(selector)
+            tag_name = selector[:tag_name].is_a?(::Symbol) ? selector[:tag_name].to_s : selector[:tag_name]
+            filter_selector[:tag_name] = tag_name
+          end
+
           # Regexp locators currently need to be validated even if they are included in the XPath builder
           # TODO: Identify Regexp that can have an exact equivalent using XPath contains (ie would not require
           #  filtering) vs approximations (ie would still requiring filtering)
@@ -219,6 +221,10 @@ module Watir
           match.captures.reject(&:empty?).map do |literals|
             "contains(#{lhs}, #{XpathSupport.escape(literals)})"
           end
+        end
+
+        def tag_validation_required?(selector)
+          (selector.key?(:css) || selector.key?(:xpath)) && selector.key?(:tag_name)
         end
 
         def ensure_scope_context
