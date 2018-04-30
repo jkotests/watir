@@ -97,16 +97,7 @@ module Watir
             raise Error, "internal error: unable to build Selenium selector from #{selector.inspect}"
           end
 
-          if how == :xpath && can_convert_regexp_to_contains?
-            filter_selector.each do |key, value|
-              next if [:tag_name, :text, :visible_text, :visible, :index].include?(key)
-
-              predicates = regexp_selector_to_predicates(key, value)
-              unless predicates.empty?
-                what = "(#{what})[#{predicates.join(' and ')}]"
-              end
-            end
-          end
+          what = add_regexp_predicates(what, filter_selector) if how == :xpath && can_convert_regexp_to_contains?
 
           needs_filtering = filter == :all || !filter_selector.empty?
           needs_filtering = false if filter_selector == {index: 0}
@@ -204,6 +195,18 @@ module Watir
 
         def can_convert_regexp_to_contains?
           true
+        end
+
+        def add_regexp_predicates(what, filter_selector)
+          filter_selector.each do |key, value|
+            next if [:tag_name, :text, :visible_text, :visible, :index].include?(key)
+
+            predicates = regexp_selector_to_predicates(key, value)
+            unless predicates.empty?
+              what = "(#{what})[#{predicates.join(' and ')}]"
+            end
+          end
+          what
         end
 
         def regexp_selector_to_predicates(key, re)
