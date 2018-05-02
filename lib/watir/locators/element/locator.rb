@@ -70,24 +70,19 @@ module Watir
         end
 
         def using_watir(filter = :first)
+          query_scope = ensure_scope_context
           selector = selector_builder.normalized_selector
+
+          if selector[:label]
+            query_scope = convert_label_to_scope_or_selector(query_scope, selector)
+            return unless query_scope # stop, label not found
+          end
 
           if selector.key?(:index) && filter == :all
             raise ArgumentError, "can't locate all elements by :index"
           end
 
           filter_selector = delete_filters_from(selector)
-
-          query_scope = ensure_scope_context
-
-          if filter_selector.key?(:label) && selector_builder.should_use_label_element?
-            label = label_from_text(filter_selector.delete(:label)) || return
-            if (id = label.attribute('for'))
-              selector[:id] = id
-            else
-              query_scope = label
-            end
-          end
 
           how, what = selector_builder.build(selector)
           unless how
@@ -176,6 +171,20 @@ module Watir
           end
 
           filter_selector
+        end
+
+        def convert_label_to_scope_or_selector(query_scope, selector)
+          return query_scope unless selector[:label].kind_of?(Regexp) && selector_builder.should_use_label_element?
+
+          label = label_from_text(selector.delete(:label))
+          return unless label # label not found, stop looking for element
+
+          if (id = label.attribute('for'))
+            selector[:id] = id
+            query_scope
+          else
+            label
+          end
         end
 
         def label_from_text(label_exp)
