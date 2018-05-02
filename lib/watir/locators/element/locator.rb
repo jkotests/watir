@@ -94,7 +94,7 @@ module Watir
             raise Error, "internal error: unable to build Selenium selector from #{selector.inspect}"
           end
 
-          what = add_regexp_predicates(what, filter_selector) if how == :xpath && can_convert_regexp_to_contains?
+          what = add_regexp_predicates(what, filter_selector) if how == :xpath
 
           needs_filtering = filter == :all || !filter_selector.empty?
           needs_filtering = false if filter_selector == {index: 0}
@@ -136,7 +136,7 @@ module Watir
         def filter_elements(elements, selector, filter: :first)
           if filter == :first
             idx = selector.delete(:index) || 0
-            if idx.negative?
+            if idx < 0
               elements.reverse!
               idx = idx.abs - 1
             end
@@ -200,6 +200,8 @@ module Watir
         end
 
         def add_regexp_predicates(what, filter_selector)
+          return what unless can_convert_regexp_to_contains?
+
           filter_selector.each do |key, value|
             next if [:tag_name, :text, :visible_text, :visible, :index].include?(key)
 
